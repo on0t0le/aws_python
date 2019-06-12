@@ -54,7 +54,7 @@ def create_ec2_instance(ec2_client, image_id, instance_type, keypair_name):
     return response['Instances'][0]
 
 
-def main():
+def main(access_key_id,secret_access_key):
     """Exercise create_ec2_instance()"""
 
     # Assign these values before running the program
@@ -84,4 +84,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(access_key_id,secret_access_key)
