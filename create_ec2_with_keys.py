@@ -121,14 +121,11 @@ def ssh_instance(host_address,key_pair_name,username):
     c.connect(hostname=host_address, username=username, pkey=k)
     print("connected")
     commands = ["ls /home/", "ls /tmp", "sudo -S mkdir /tmp/test"]
-    for command in commands:
-        #print("Executing {}".format(command))
+    for command in commands:        
         stdin, stdout, stderr = c.exec_command(command)
         print(stdout.read())
         print("Errors")
         print(stderr.read())
-    # stdin, stdout, stderr = c.exec_command('sudo -S whoami')
-    # print(stdout.read())
     c.close()
 
 #Connect boto3 ec2 client to AWS
