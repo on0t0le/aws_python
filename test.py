@@ -6,20 +6,6 @@ import os
 access_key_id = os.environ['aws_access_key_id']
 secret_access_key = os.environ['aws_secret_access_key']
 
-# client = boto3.client(
-#     'ec2',
-#     aws_access_key_id="AKIAUALX37SZFGIU6NEL",
-#     aws_secret_access_key="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",
-#     region_name="eu-central-1"
-# )
-
-# response = client.describe_instances()
-# for reservation in response["Reservations"]:
-#     for instance in reservation["Instances"]:
-#         # This sample print will output entire Dictionary object
-#         print(instance)
-#         # This will print will output the value of the Dictionary key 'InstanceId'
-#         print(instance["InstanceId"])
 
 def create_ec2_instance(image_id, instance_type, keypair_name, access_key_id, secret_access_key):
     """Provision and launch an EC2 instance
