@@ -9,7 +9,7 @@ instance_type = 't2.micro'
 key_pair_name = 'testkeypy'
 instance_name = 'TestEC2'
 
-def create_ec2_instance(ec2_client,image_id,instance_type,key_pair_name,instance_name):
+def create_ec2_instance(ec2_client,image_id,instance_type,instance_name,key_pair_name,sg_id):
     params = {
                 'ImageId': image_id,
                 'InstanceType': instance_type,
@@ -28,32 +28,41 @@ def create_ec2_instance(ec2_client,image_id,instance_type,key_pair_name,instance
                 }]
             }
     
-    instances = ec2_client.describe_instances(
-        Filters=[
-            {
-                'Name': 'tag:Name',
-                'Values': [ instance_name ]
-            }
-        ])
+    instances = ec2_client.describe_instances(Filters=[{'Name': 'tag:Name','Values': [ instance_name ]}])
+
     if instances['Reservations']:
-        for instance in instances['Reservations']:
-            print(instance['Instances'][0]['InstanceId'])
-            return instance['Instances'][0]['InstanceId']
+        for reservations in instances['Reservations']:
+            for instance in reservations['Instances']:
+                if instance['State']['Name']=='running' or instance['State']['Name']=='pending':
+                    print(instance['InstanceId'])
+                    return instance['InstanceId']
 
     # Instance was not found, create it
 
     instances = ec2_client.run_instances(**params)
 
-    waiter = ec2_client.get_waiter('instance_running')
+    run_waiter = ec2_client.get_waiter('instance_running')
 
     instance_id = instances['Instances'][0]['InstanceId']
-    waiter.wait(InstanceIds=[instance_id])    
-    #print(instances['Instances'][0]["State"]["Name"])
+    run_waiter.wait(InstanceIds=[instance_id])
+
+    ok_waiter = ec2_client.get_waiter('instance_status_ok')
+    ok_waiter.wait(InstanceIds=[instance_id])
+
     return instance_id
 
+def create_pub_key():
+    fp = open(os.path.expanduser('./test_key_public'))
+    pub_key = fp.read()
+    fp.close()
+    return pub_key
+
 def create_key_pair(ec2_client,key_pair_name):
-    key = ec2_client.create_key_pair(KeyName=key_pair_name)
-    key.save('./')
+    
+    #Delete if exists
+    if not ec2_client.describe_key_pairs(Filters=[{'Name': 'key-name','Values': [key_pair_name]}])['KeyPairs']:        
+        pub_key = create_pub_key()
+        ec2_client.import_key_pair(KeyName=key_pair_name,PublicKeyMaterial=pub_key)
 
 def create_security_group(ec2_client,groupName,vpc_id):
     for sec_group in ec2_client.describe_security_groups()['SecurityGroups']:
@@ -113,4 +122,4 @@ security_group_id = create_security_group(ec2_client,'TestSG',vpc_id)
 
 create_key_pair(ec2_client,key_pair_name)
 
-ec2_instance_id = create_ec2_instance(ec2_client,)
+ec2_instance_id = create_ec2_instance(ec2_client,image_id,instance_type,instance_name,key_pair_name,security_group_id)
