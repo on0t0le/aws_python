@@ -1,8 +1,8 @@
 import paramiko
 
-host_address = '35.159.46.240'
+host_address = '18.184.139.38'
 
-k = paramiko.RSAKey.from_private_key_file("./mytestkey")
+k = paramiko.RSAKey.from_private_key_file("./testkeypy")
 c = paramiko.SSHClient()
 c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 print("connecting")
