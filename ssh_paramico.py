@@ -1,8 +1,8 @@
 import paramiko
 
-host_address = '52.59.152.156'
+host_address = '35.159.46.240'
 
-k = paramiko.RSAKey.from_private_key_file("D:\\Downloads\\aperture-web1.pem")
+k = paramiko.RSAKey.from_private_key_file("./mytestkey")
 c = paramiko.SSHClient()
 c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 print("connecting")

@@ -41,13 +41,17 @@ def create_ec2_instance(ec2_client,image_id,instance_type,instance_name,key_pair
 
     instances = ec2_client.run_instances(**params)
 
-    run_waiter = ec2_client.get_waiter('instance_running')
-
     instance_id = instances['Instances'][0]['InstanceId']
-    run_waiter.wait(InstanceIds=[instance_id])
 
+    #Wait instance running state
+    run_waiter = ec2_client.get_waiter('instance_running')
+    run_waiter.wait(InstanceIds=[instance_id])
+    print('Instance %s is running, but NOT all checks' %(instance_id))
+
+    #Wait instance OK state
     ok_waiter = ec2_client.get_waiter('instance_status_ok')
     ok_waiter.wait(InstanceIds=[instance_id])
+    print('Instance %s is running succesfully!' %(instance_id))
 
     return instance_id
 
