@@ -22,6 +22,6 @@ instances = ec2_client.describe_instances(
     ])
 if instances['Reservations']:
     for instance in instances['Reservations']:
-        print(instance['Instances'][0]['InstanceId'])
+        print(instance['Instances'][0]['PublicIpAddress'])
 else:
     print(instances)
