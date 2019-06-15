@@ -38,7 +38,7 @@ def create_ec2_instance(ec2_client,ec2_resource,image_id,instance_type,instance_
         for reservations in instances['Reservations']:
             for instance in reservations['Instances']:
                 if instance['State']['Name']=='running' or instance['State']['Name']=='pending':
-                    print(instance['InstanceId'])
+                    print('Instance has already created. Instance id is %s' % instance['InstanceId'])
                     return
 
     # Instance was not found, create it
