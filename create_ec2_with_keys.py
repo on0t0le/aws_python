@@ -2,16 +2,15 @@ import boto3
 import os
 from paramiko import RSAKey
 import paramiko
-import time 
 
 access_key_id = os.environ['aws_access_key_id']
 secret_access_key = os.environ['aws_secret_access_key']
 region = 'eu-central-1'
 image_id = 'ami-0ebe657bc328d4e82'
 instance_type = 't2.micro'
-key_pair_name = 'mykey'
-instance_name = 'TestEC2'
 username = 'ec2-user'
+key_pair_name = 'mykey'
+instance_name = 'myec2'
 volume_name = 'myvolume'
 
 def create_ec2_instance(ec2_client,ec2_resource,image_id,instance_type,instance_name,key_pair_name,sg_id):
@@ -86,8 +85,9 @@ def create_key_pair(ec2_client,key_pair_name):
 def create_security_group(ec2_client,groupName,vpc_id):
     for sec_group in ec2_client.describe_security_groups()['SecurityGroups']:
         if sec_group['GroupName'] == groupName:
-            print(sec_group['GroupId'])
-            return (sec_group['GroupId'])
+            sec_group_id = sec_group['GroupId']
+            print('Security group id is %s' % sec_group_id)
+            return (sec_group_id)
 
     # Security Group was not found, create it
     sec_group = ec2_client.create_security_group(
@@ -107,7 +107,7 @@ def create_security_group(ec2_client,groupName,vpc_id):
                     'IpRanges': [{'CidrIp': '188.190.242.48/32'}]}
                 ]
     )
-    print(sec_group_id)
+    print('Security group id is %s' % sec_group_id)
     return(sec_group_id)
 
 def create_attach_ebs(ec2_resource,ec2_client,instance_availability_zone,ec2_instance_id,volume_name):
@@ -118,18 +118,24 @@ def create_attach_ebs(ec2_resource,ec2_client,instance_availability_zone,ec2_ins
         for volume in volumes:
             for attach in volume['Attachments']:
                 if attach['InstanceId']==ec2_instance_id:
+                    print('Volume was created previously and attached to instance')
                     return
-                else:
-                    volume_id=volume['VolumeId']
-                    volume=ec2_resource.Volume(volume_id)
-                    volume.attach_to_instance(Device='/dev/xvdh',InstanceId=ec2_instance_id)
-                    return
+            if volume['State']!='in-use':
+                print('Volume was created previously but not attached. Please wait.')
+                volume_id=volume['VolumeId']
+                volume=ec2_resource.Volume(volume_id)
+                volume.attach_to_instance(Device='/dev/xvdh',InstanceId=ec2_instance_id)
+                ec2_client.get_waiter('volume_in_use').wait(VolumeIds=[volume_id])
+                return
     
+    print('Creating volume. Please wait.')
     create_response=ec2_client.create_volume(AvailabilityZone=instance_availability_zone,Size=1,VolumeType='standard',TagSpecifications=[{'ResourceType': 'volume','Tags': [{'Key': 'Name','Value': volume_name}]}])
     volume_id=create_response['VolumeId']
     volume=ec2_resource.Volume(volume_id)
-    ec2_client.get_waiter('volume_available').wait(VolumeIds=[volume_id])
+    ec2_client.get_waiter('volume_available').wait(VolumeIds=[volume_id])    
     volume.attach_to_instance(Device='/dev/xvdh',InstanceId=ec2_instance_id)
+    ec2_client.get_waiter('volume_in_use').wait(VolumeIds=[volume_id])
+
 
 def ssh_instance(ec2_instance_public_ip,key_pair_name,username):
     if not os.path.exists("./%s" % key_pair_name):
@@ -142,7 +148,7 @@ def ssh_instance(ec2_instance_public_ip,key_pair_name,username):
     print("connecting")
     c.connect(hostname=host_address, username=username, pkey=k)
     print("connected")
-    commands = ["sudo -s mkfs.xfs -f /dev/xvdh", "sudo -s mkdir /data", "sudo -s mount /dev/xvdh /data"]
+    commands = ["sudo -S lsblk","sudo -S mkfs.ext4 /dev/xvdh", "sudo -S mkdir /data", "sudo -S mount /dev/xvdh /data"]
     for command in commands:
         print("Executing {}".format(command))        
         stdin, stdout, stderr = c.exec_command(command)
@@ -157,7 +163,6 @@ def get_info(ec2_client,instance_name):
         for reservations in instances['Reservations']:
             for instance in reservations['Instances']:
                 if instance['State']['Name']=='running' or instance['State']['Name']=='pending':
-                    print(instance['InstanceId'])
                     return instance['InstanceId'], instance['PublicIpAddress'], instance['Placement']['AvailabilityZone']
 
 #Connect boto3 ec2 client to AWS
